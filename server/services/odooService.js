@@ -1,14 +1,27 @@
 const xmlrpc = require('xmlrpc');
 const path = require('path');
 const dotenv = require('dotenv');
-dotenv.config({ path: path.join(__dirname, '../.env') });
+const fs = require('fs');
+
+// Charger dotenv seulement si le fichier existe (local), sinon utiliser process.env (Render)
+if (fs.existsSync(path.join(__dirname, '../.env'))) {
+    dotenv.config({ path: path.join(__dirname, '../.env') });
+} else {
+    dotenv.config();
+}
 
 const url = process.env.ODOO_URL;
 const db = process.env.ODOO_DB;
 const username = process.env.ODOO_USER;
 const password = process.env.ODOO_API_KEY;
 
-const host = new URL(url).hostname;
+console.log(`[ODOO] Initialisation sur ${url} (DB: ${db}, User: ${username})`);
+
+if (!url || !db || !username || !password) {
+    console.error('[ODOO] ERREUR : Variables Odoo manquantes !');
+}
+
+const host = url ? new URL(url).hostname : '';
 const commonClient = xmlrpc.createSecureClient({ host, port: 443, path: '/xmlrpc/2/common' });
 const modelsClient = xmlrpc.createSecureClient({ host, port: 443, path: '/xmlrpc/2/object' });
 

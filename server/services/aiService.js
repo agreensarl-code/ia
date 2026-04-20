@@ -1,7 +1,19 @@
 const OpenAI = require('openai');
 const path = require('path');
 const dotenv = require('dotenv');
-dotenv.config({ path: path.join(__dirname, '../.env') });
+const fs = require('fs');
+
+// Charger dotenv seulement si le fichier existe (local), sinon utiliser process.env (Render)
+if (fs.existsSync(path.join(__dirname, '../.env'))) {
+    dotenv.config({ path: path.join(__dirname, '../.env') });
+} else {
+    dotenv.config();
+}
+
+console.log(`[OPENAI] Initialisation avec modèle: ${process.env.OPENAI_MODEL}`);
+if (!process.env.OPENAI_API_KEY) {
+    console.error('[OPENAI] ERREUR : API Key manquante !');
+}
 
 const openai = new OpenAI({
     apiKey: process.env.OPENAI_API_KEY

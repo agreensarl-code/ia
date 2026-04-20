@@ -2,13 +2,22 @@ const { createClient } = require('@supabase/supabase-js');
 const path = require('path');
 const dotenv = require('dotenv');
 
-dotenv.config({ path: path.join(__dirname, '../.env') });
+const fs = require('fs');
+
+// Charger dotenv seulement si le fichier existe (local), sinon utiliser process.env (Render)
+if (fs.existsSync(path.join(__dirname, '../.env'))) {
+    dotenv.config({ path: path.join(__dirname, '../.env') });
+} else {
+    dotenv.config();
+}
 
 const supabaseUrl = process.env.SUPABASE_URL;
 const supabaseKey = process.env.SUPABASE_KEY;
 
+console.log(`[SUPABASE] Initialisation avec URL: ${supabaseUrl ? 'OK' : 'MANQUANT'}`);
+
 if (!supabaseUrl || !supabaseKey) {
-    console.error('ERREUR: SUPABASE_URL ou SUPABASE_KEY manquant dans le .env');
+    console.error('[SUPABASE] ERREUR : SUPABASE_URL ou SUPABASE_KEY manquant !');
 }
 
 const supabase = createClient(supabaseUrl, supabaseKey);
