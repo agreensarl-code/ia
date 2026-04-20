@@ -1,5 +1,6 @@
 const { ImapFlow } = require('imapflow');
 const nodemailer = require('nodemailer');
+const fs = require('fs');
 const path = require('path');
 const dotenv = require('dotenv');
 // Charger dotenv seulement si le fichier existe (local), sinon utiliser process.env (Render)
