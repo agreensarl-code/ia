@@ -5,7 +5,7 @@ import {
   Mail, RefreshCw, ChevronRight, Send, Zap, Plus, X, Search, AlertTriangle, CheckCircle
 } from 'lucide-react';
 
-const API_BASE = 'http://localhost:3001/api';
+const API_BASE = '/api';
 
 const App = () => {
     const [activeTab, setActiveTab] = useState('emails'); // 'emails' | 'dispatch'
