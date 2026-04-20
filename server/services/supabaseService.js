@@ -151,6 +151,32 @@ const supabaseService = {
         
         if (error) return null;
         return { ...data.data, id: data.id, status: data.status };
+    },
+
+    async findPendingByClient(partnerId, email) {
+        let query = supabase
+            .from('emails_pending')
+            .select('*')
+            .eq('status', 'pending');
+        
+        if (partnerId) {
+            query = query.eq('data->partner->>id', partnerId.toString());
+        } else {
+            query = query.eq('data->email->>from', email);
+        }
+
+        const { data, error } = await query.limit(1);
+        if (error || !data || data.length === 0) return null;
+        return { ...data[0].data, id: data[0].id, status: data[0].status };
+    },
+
+    async updatePendingEmail(id, emailData) {
+        const { error } = await supabase
+            .from('emails_pending')
+            .update({ data: emailData })
+            .eq('id', id);
+        
+        if (error) throw error;
     }
 };
 

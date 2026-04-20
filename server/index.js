@@ -27,64 +27,123 @@ app.post('/api/scan', async (req, res) => {
     try {
         console.log('Scanning for unread emails...');
         const unreadEmails = await emailService.fetchUnread();
-        console.log(`[API] ${unreadEmails.length} emails récupérés pour analyse.`);
+        console.log(`[API] ${unreadEmails.length} emails récupérés.`);
+        
+        const products = await odooService.getProducts();
         const results = [];
 
-        // 1. Charger le catalogue produits une seule fois pour le scan
-        const products = await odooService.getProducts();
-
+        // 1. Identifier les partenaires et filtrer les doublons de messageId/UID
+        const emailGroups = {}; // Key: partnerId or email
+        
         for (const email of unreadEmails) {
-            // Éviter les doublons (En attente + Historique) via Supabase
             const isDuplicate = await supabaseService.isDuplicate(email.uid, email.messageId);
-            
             if (isDuplicate) continue;
 
-            console.log(`Analyzing email from ${email.from}: ${email.subject}`);
-            
-            // 2. Chercher le partenaire dans Odoo (Email puis Nom)
+            // Identifier le partenaire Odoo
             let partner = await odooService.searchPartnerByEmail(email.from);
             if (!partner && email.fromName) {
                 const potentialPartners = await odooService.searchPartnersByName(email.fromName);
-                if (potentialPartners.length > 0) {
-                    partner = potentialPartners[0]; // On prend le meilleur match
-                }
+                if (potentialPartners.length > 0) partner = potentialPartners[0];
             }
+
+            const groupId = partner ? `partner-${partner.id}` : `email-${email.from}`;
+            if (!emailGroups[groupId]) {
+                emailGroups[groupId] = {
+                    partner,
+                    emails: [],
+                    fromEmail: email.from,
+                    fromName: email.fromName
+                };
+            }
+            emailGroups[groupId].emails.push(email);
+        }
+
+        // 2. Traiter chaque groupe de client
+        for (const groupId in emailGroups) {
+            const group = emailGroups[groupId];
             
-            // 3. Chercher les tâches existantes, l'historique et l'adresse
+            // Chercher s'il y a déjà un dossier "pending" pour ce client dans Supabase
+            let existingPending = await supabaseService.findPendingByClient(
+                group.partner ? group.partner.id : null,
+                group.fromEmail
+            );
+
+            let combinedBody = existingPending ? existingPending.email.body : '';
+            const newEmails = [];
+
+            for (const email of group.emails) {
+                // Vérifier si le contenu du mail est déjà présent (doublon de contenu)
+                if (combinedBody.includes(email.body.trim())) {
+                    console.log(`[SCAN] Doublon de contenu ignoré pour ${group.fromEmail}`);
+                    continue;
+                }
+                
+                if (combinedBody) combinedBody += "\n\n--- Nouveau message ---\n\n";
+                combinedBody += email.body;
+                newEmails.push(email);
+            }
+
+            if (newEmails.length === 0 && !existingPending) continue;
+            if (newEmails.length === 0 && existingPending) continue; // Rien de nouveau à ajouter
+
+            console.log(`[SCAN] Analyse synthèse pour ${group.fromName || group.fromEmail} (${newEmails.length} nouveaux messages)`);
+
+            // Préparer les données pour l'IA
             let existingTasks = [];
             let partnerHistory = [];
             let partnerAddress = null;
-            if (partner) {
-                existingTasks = await odooService.getTasksForPartner(partner.id);
-                partnerHistory = await odooService.getPartnerHistory(partner.id);
-                partnerAddress = await odooService.getPartnerDetails(partner.id);
+            if (group.partner) {
+                existingTasks = await odooService.getTasksForPartner(group.partner.id);
+                partnerHistory = await odooService.getPartnerHistory(group.partner.id);
+                partnerAddress = await odooService.getPartnerDetails(group.partner.id);
             }
 
-            // 4. Analyse IA avec connaissance Odoo & Routage Localisation
             const aiAnalysis = await aiService.analyzeEmail(
-                email.body, 
-                existingTasks, 
-                email.fromName || email.from,
+                combinedBody,
+                existingTasks,
+                group.fromName || group.fromEmail,
                 products,
                 partnerHistory,
                 partnerAddress
             );
 
-            // Petit délai pour éviter de saturer le quota OpenAI (Rate Limit)
+            // Attendre un peu pour le rate limit OpenAI
             await new Promise(resolve => setTimeout(resolve, 800));
 
-            const pendingItem = {
-                id: Date.now() + Math.random().toString(36).substr(2, 9),
-                emailUid: email.uid,
-                messageId: email.messageId,
-                email: email,
-                partner: partner,
-                ai: aiAnalysis,
-                status: 'pending'
-            };
-
-            await supabaseService.addPendingEmail(pendingItem.id, pendingItem);
-            results.push(pendingItem);
+            if (existingPending) {
+                // Mettre à jour l'entrée existante
+                const updatedItem = {
+                    ...existingPending,
+                    email: {
+                        ...existingPending.email,
+                        body: combinedBody,
+                        subject: newEmails[0]?.subject || existingPending.email.subject,
+                        count: (existingPending.email.count || 1) + newEmails.length
+                    },
+                    ai: aiAnalysis,
+                    lastUpdate: new Date().toISOString()
+                };
+                await supabaseService.updatePendingEmail(existingPending.id, updatedItem);
+                results.push(updatedItem);
+            } else {
+                // Créer une nouvelle entrée
+                const pendingItem = {
+                    id: Date.now() + Math.random().toString(36).substr(2, 9),
+                    emailUid: newEmails[0].uid,
+                    messageId: newEmails[0].messageId,
+                    email: {
+                        ...newEmails[0],
+                        body: combinedBody,
+                        count: newEmails.length
+                    },
+                    partner: group.partner,
+                    ai: aiAnalysis,
+                    status: 'pending',
+                    created_at: new Date().toISOString()
+                };
+                await supabaseService.addPendingEmail(pendingItem.id, pendingItem);
+                results.push(pendingItem);
+            }
         }
 
         res.json({ success: true, newItems: results.length });

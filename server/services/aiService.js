@@ -54,15 +54,19 @@ ${JSON.stringify(partnerHistory, null, 2)}
 TÂCHES EN COURS :
 ${JSON.stringify(existingTasks, null, 2)}
 
+CONSIGNES DE SYNTHÈSE (CAS MULTI-EMAILS) :
+- Si l'EMAIL DU CLIENT contient plusieurs messages (séparés par des tirets), analyse l'ensemble des demandes comme un tout cohérent.
+- Produis une SEULE réponse email qui traite tous les points soulevés dans les différents messages.
+
 EMAIL DU CLIENT :
 Contenu: "${emailContent}"
 
 TA MISSION :
-1. Analyse la demande.
+1. Analyse la ou les demandes (si plusieurs messages sont fournis).
 2. Détermine si une nouvelle intervention est nécessaire.
 3. Si oui, calcule une date d'intervention. RÈGLE D'OPTIMISATION GEOGRAPHIQUE : Analyse minutieusement les TÂCHES EN COURS. Si le technicien est DÉJÀ prévu dans la même zone (ex: même projet Arlon ou Bastogne, ou même ville) à une date future, tu DOIS proposer cette MÊME date pour grouper les trajets. Sinon, propose le prochain jour disponible.
 4. Détermine le bon ID de projet (suggestedProjectId) selon les règles de routage ci-dessus.
-5. Rédige une réponse d'email courte, BANALE et directe en français (pas de marketing, pas de chichis).
+5. Rédige une réponse d'email courte, BANALE et directe en français qui synthétise toutes les demandes en une seule réponse.
 
 FORMAT DE RÉPONSE :
 - La réponse ('emailResponse') doit être en TEXTE BRUT (pas de HTML, pas de balises).

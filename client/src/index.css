@@ -88,6 +88,69 @@ h1, h2, h3, h4 {
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
 }
 
+.tab-count {
+  background: var(--danger);
+  color: white;
+  padding: 2px 6px;
+  border-radius: 10px;
+  font-size: 0.7rem;
+  font-weight: 700;
+  margin-left: 6px;
+}
+
+.sort-controls {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background: var(--bg-secondary);
+  padding: 4px 12px;
+  border-radius: 10px;
+  border: 1px solid var(--border-color);
+}
+
+.sort-btn {
+  background: transparent;
+  border: none;
+  color: var(--text-secondary);
+  font-size: 0.8rem;
+  font-weight: 600;
+  padding: 4px 8px;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: var(--transition-fast);
+}
+
+.sort-btn:hover {
+  background: rgba(255, 255, 255, 0.05);
+  color: var(--text-primary);
+}
+
+.sort-btn.active {
+  background: var(--bg-card);
+  color: var(--accent-color);
+}
+
+.notification-badge {
+  position: absolute;
+  top: 16px;
+  right: 16px;
+  background: var(--danger);
+  color: white;
+  padding: 4px 10px;
+  border-radius: 20px;
+  font-size: 0.75rem;
+  font-weight: 800;
+  box-shadow: 0 4px 12px rgba(239, 68, 68, 0.4);
+  z-index: 10;
+  animation: pulse 2s infinite;
+}
+
+@keyframes pulse {
+  0% { transform: scale(1); box-shadow: 0 4px 12px rgba(239, 68, 68, 0.4); }
+  50% { transform: scale(1.05); box-shadow: 0 4px 20px rgba(239, 68, 68, 0.6); }
+  100% { transform: scale(1); box-shadow: 0 4px 12px rgba(239, 68, 68, 0.4); }
+}
+
 /* Cards */
 .item-card {
   margin-bottom: 16px;

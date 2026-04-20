@@ -19,6 +19,10 @@ const App = () => {
     const [dispatchScanning, setDispatchScanning] = useState(false);
     const [selectedDispatch, setSelectedDispatch] = useState(null);
 
+    // Sorting States
+    const [sortBy, setSortBy] = useState('date'); // 'date' | 'name'
+    const [sortOrder, setSortOrder] = useState('desc'); // 'asc' | 'desc'
+
     // Global Error State
     const [creditError, setCreditError] = useState(false);
 
@@ -203,6 +207,35 @@ const App = () => {
         setModProject(item.ai.suggestedProjectId || (projects.length > 0 ? projects[0].id : ''));
     };
 
+    const toggleSort = (field) => {
+        if (sortBy === field) {
+            setSortOrder(sortOrder === 'asc' ? 'desc' : 'asc');
+        } else {
+            setSortBy(field);
+            setSortOrder('desc');
+        }
+    };
+
+    const getSortedList = (list) => {
+        return [...list].sort((a, b) => {
+            let valA, valB;
+            if (sortBy === 'date') {
+                valA = new Date(a.email?.date || a.created_at || a.ai?.proposedDate || 0);
+                valB = new Date(b.email?.date || b.created_at || b.ai?.proposedDate || 0);
+            } else {
+                valA = (a.partner?.name || a.email?.fromName || a.email?.from || '').toLowerCase();
+                valB = (b.partner?.name || b.email?.fromName || b.email?.from || '').toLowerCase();
+            }
+
+            if (valA < valB) return sortOrder === 'asc' ? -1 : 1;
+            if (valA > valB) return sortOrder === 'asc' ? 1 : -1;
+            return 0;
+        });
+    };
+
+    const sortedPending = getSortedList(pending);
+    const sortedDispatchPending = getSortedList(dispatchPending);
+
     return (
         <div className="app-container">
             {creditError && (
@@ -249,7 +282,23 @@ const App = () => {
                             className={`tab ${activeTab === 'dispatch' ? 'active' : ''}`} 
                             onClick={() => setActiveTab('dispatch')}
                         >
-                            <Zap size={18} /> Dépannages
+                            <Zap size={18} /> Dépannages {dispatchPending.length > 0 && <span className="tab-count">{dispatchPending.length}</span>}
+                        </button>
+                    </div>
+
+                    <div className="sort-controls">
+                        <span style={{ fontSize: '0.8rem', opacity: 0.6 }}>Trier par:</span>
+                        <button 
+                            onClick={() => toggleSort('date')}
+                            className={`sort-btn ${sortBy === 'date' ? 'active' : ''}`}
+                        >
+                            Date {sortBy === 'date' && (sortOrder === 'asc' ? '↑' : '↓')}
+                        </button>
+                        <button 
+                            onClick={() => toggleSort('name')}
+                            className={`sort-btn ${sortBy === 'name' ? 'active' : ''}`}
+                        >
+                            Nom {sortBy === 'name' && (sortOrder === 'asc' ? '↑' : '↓')}
                         </button>
                     </div>
 
@@ -297,7 +346,7 @@ const App = () => {
                         </motion.div>
                     )}
 
-                    {activeTab === 'emails' && pending.map((item) => (
+                    {activeTab === 'emails' && sortedPending.map((item) => (
                         <motion.div 
                             key={item.id}
                             layout
@@ -306,7 +355,13 @@ const App = () => {
                             exit={{ opacity: 0, scale: 0.95 }}
                             className="glass item-card urgent"
                             onClick={() => openModal(item)}
+                            style={{ position: 'relative' }}
                         >
+                            {item.email?.count > 1 && (
+                                <div className="notification-badge">
+                                    {item.email.count} emails
+                                </div>
+                            )}
                             <div style={{ display: 'flex', alignItems: 'center', gap: '20px' }}>
                                 <div style={{ 
                                     width: '48px', height: '48px', 
@@ -341,7 +396,7 @@ const App = () => {
                     ))}
 
                     {/* DISPATCH LIST */}
-                    {activeTab === 'dispatch' && dispatchPending.length === 0 && !dispatchScanning && (
+                    {activeTab === 'dispatch' && sortedDispatchPending.length === 0 && !dispatchScanning && (
                         <motion.div 
                             initial={{ opacity: 0 }} animate={{ opacity: 1 }}
                             style={{ textAlign: 'center', padding: '100px', color: 'var(--text-secondary)' }}
@@ -351,7 +406,7 @@ const App = () => {
                         </motion.div>
                     )}
 
-                    {activeTab === 'dispatch' && dispatchPending.map((item) => (
+                    {activeTab === 'dispatch' && sortedDispatchPending.map((item) => (
                         <motion.div 
                             key={item.id}
                             layout
