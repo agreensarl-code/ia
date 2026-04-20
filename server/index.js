@@ -25,8 +25,9 @@ app.use(express.static(DIST_PATH));
  */
 app.post('/api/scan', async (req, res) => {
     try {
-        console.log('Scanning for unread emails...');
-        const unreadEmails = await emailService.fetchUnread();
+        console.log('Scanning for unread emails (Limit: 5)...');
+        const unreadEmails = await emailService.fetchUnread(5);
+        console.log(`[API] ${unreadEmails.length} emails récupérés pour analyse.`);
         const results = [];
 
         // 1. Charger le catalogue produits une seule fois pour le scan

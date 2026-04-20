@@ -34,8 +34,8 @@ const config = {
 
 const { simpleParser } = require('mailparser');
 
-const fetchUnread = async () => {
-    console.log(`[IMAP] Tentative de connexion à ${config.imap.host} avec l'utilisateur ${config.imap.user}...`);
+const fetchUnread = async (limit = 10) => {
+    console.log(`[IMAP] Tentative de connexion à ${config.imap.host} avec l'utilisateur ${config.imap.user} (Limite: ${limit})...`);
     
     if (!config.imap.user || !config.imap.auth.pass) {
         console.error('[IMAP] ERREUR : EMAIL_USER ou EMAIL_PASS est vide !');
@@ -52,6 +52,8 @@ const fetchUnread = async () => {
         const folders = ['INBOX', 'a. Interne', 'b. Site web', 'c. Privé (Client)'];
 
         for (const folder of folders) {
+            if (emails.length >= limit) break; // Arrêter si on a atteint la limite globale
+
             try {
                 let lock = await client.getMailboxLock(folder);
                 try {
@@ -59,6 +61,8 @@ const fetchUnread = async () => {
                     console.log(`[IMAP] Dossier ${folder} : ${uids.length} emails non lus trouvés.`);
                     
                     for (let uid of uids) {
+                        if (emails.length >= limit) break; // Arrêter si on a atteint la limite globale
+                        
                         let message = await client.fetchOne(uid, { source: true }, { uid: true });
                         let parsed = await simpleParser(message.source);
                         
