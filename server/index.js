@@ -16,7 +16,7 @@ app.use(cors());
 app.use(express.json());
 
 const PORT = process.env.PORT || 3001;
-const DIST_PATH = path.join(__dirname, 'dist');
+const DIST_PATH = path.join(__dirname, '../client/dist');
 
 app.use(express.static(DIST_PATH));
 
